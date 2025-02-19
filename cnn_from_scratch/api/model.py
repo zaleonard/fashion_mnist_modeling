@@ -6,16 +6,8 @@ import torch.nn.functional as F
 import torch.optim as optim
 import torchvision
 import torchvision.transforms as transforms
+import matplotlib.pyplot as plt
 
-transform = transforms.ToTensor()
-
-trainset = torchvision.datasets.FashionMNIST(root='./data', train=True, download=True, transform=transform)
-trainloader = torch.utils.data.DataLoader(trainset, batch_size=4, shuffle=True, num_workers=2)
-
-testset = torchvision.datasets.FashionMNIST(root='./data', train=False, download=True, transform=transform)
-testloader = torch.utils.data.DataLoader(testset, batch_size=4, shuffle=False, num_workers=2)
-
-classes = ('T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat', 'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot')
 
 class CustomNet(nn.Module):
     
@@ -39,28 +31,78 @@ class CustomNet(nn.Module):
         x = self.fc3(x)
         return x
 
+def main():
+    transform = transforms.ToTensor()
 
-net = CustomNet()
-loss_function = nn.CrossEntropyLoss() #categorical
-optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+    trainset = torchvision.datasets.FashionMNIST(root='./data', train=True, download=True, transform=transform)
+    trainloader = torch.utils.data.DataLoader(trainset, batch_size=4, shuffle=True, num_workers=2)
 
-torch.save(net.state_dict(), 'trained_net.pth')
+    testset = torchvision.datasets.FashionMNIST(root='./data', train=False, download=True, transform=transform)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=4, shuffle=False, num_workers=2)
 
-correct = 0
-total = 0
+    classes = ('T-shirt/top', 'Trouser', 'Pullover', 'Dress', 'Coat', 'Sandal', 'Shirt', 'Sneaker', 'Bag', 'Ankle boot')
 
-net.eval()
+    net = CustomNet()
+    loss_function = nn.CrossEntropyLoss() #categorical
+    optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
+    num_epochs = 30
+    train_loss = []
+    val_loss = []
 
-with torch.no_grad():
-    for data in testloader:
-        
-        images, labels = data
-        outputs = net(images)
-        _, predicted = torch.max(outputs, 1)
-        total += labels.size(0)
-        correct += (predicted == labels).sum().item()
-        
-print('Accuracy of the network on the 10000 test images: %d %%' % (100 * correct / total))
+    for epoch in range(num_epochs):
+        print(f'Training epoch {epoch}...')
 
-#87% on two epochs
+        running_loss = 0.0
+
+        for i, data in enumerate(trainloader, 0):
+            inputs, labels = data
+            optimizer.zero_grad()
+            outputs = net(inputs)
+            loss = loss_function(outputs, labels)
+            loss.backward()
+            optimizer.step()
+
+            running_loss += loss.item()
+        train_loss.append(running_loss / len(trainloader))
+
+        net.eval()
+        validation_loss = 0.0
+        with torch.no_grad():
+            for images, labels in testloader:
+                outputs = net(images)
+                loss = loss_function(outputs, labels)
+                validation_loss += loss.item()
+
+        val_loss.append(validation_loss / len(testloader))
+        print(f'Epoch [{epoch + 1}/{num_epochs}], Train Loss: {train_loss[-1]:.4f}, Validation Loss: {val_loss[-1]:.4f}')
+        net.train()
+
+
+    torch.save(net.state_dict(), './trained_net.pth')
+
+    correct = 0
+    total = 0
+
+    net.eval()
+
+    with torch.no_grad():
+        for data in testloader:
+            
+            images, labels = data
+            outputs = net(images)
+            _, predicted = torch.max(outputs, 1)
+            total += labels.size(0)
+            correct += (predicted == labels).sum().item()
+            
+    print('Accuracy of the network on the 10000 test images: %d %%' % (100 * correct / total))
+    plt.plot(train_loss, label='Training Loss')
+    plt.plot(val_loss, label='Validation Loss')
+    plt.xlabel('Epochs')
+    plt.ylabel('Loss')
+    plt.title('Training and Validation Loss Over Epochs')
+    plt.legend()
+    plt.show()
+
+if __name__ == "__main__":
+    main()
         
