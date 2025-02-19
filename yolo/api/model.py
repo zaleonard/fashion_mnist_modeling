@@ -1,5 +1,3 @@
-#yolo8 - look at yolo schema for proper structure
-#find models on the website
 from ultralytics import YOLO
 import os
 
