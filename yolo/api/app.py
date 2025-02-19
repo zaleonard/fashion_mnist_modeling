@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 
 app = FastAPI()
-model_path = r'C:\Users\zaleo\Desktop\AI\cv_mnist\yolo\runs\classify\train10\weights\last.pt'
+model_path = r'yolo/models/yolov8n-cls.pt'
 model = YOLO(model_path)
 
 class Image(BaseModel):
@@ -41,7 +41,7 @@ async def classify(image: Image):
     return {'prediction' : output.names[pred_index],
             'Score': pred[pred_index],
             'image_url' : image_url}
-# Run the API using uvicorn
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)
